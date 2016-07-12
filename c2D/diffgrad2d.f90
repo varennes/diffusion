@@ -1,5 +1,6 @@
 program diff
-! test diffusion on a 2d lattice
+! diffusion on a 2d lattice
+! a constant gradient is imposed by special boundary conditions
 ! tracks time evolution of chemical concentration
 
 implicit none
@@ -7,15 +8,19 @@ implicit none
 integer,  parameter :: b8 = selected_real_kind(14)
 
 real(b8), parameter :: d  = 0.01_b8  ! diffusion coefficient
+real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.001_b8 ! time-step size
 
-integer :: i, j, k, n, nfinal
+integer :: i, j, k, n, nx, ny, nfinal
 integer :: sysSize(2)
 real(b8), allocatable :: c(:,:), cDelta(:,:), cTime(:,:,:)
 
 ! set system size
-sysSize(1) = 3
-sysSize(2) = 3
+! additional lattice sites needed to create gradient
+nx = 3
+ny = 3
+sysSize(1) = nx + 2
+sysSize(2) = ny + 2
 
 ! number of time-steps to iterate over
 nfinal = 1000
@@ -29,20 +34,25 @@ allocate( cTime( nfinal, sysSize(1), sysSize(2)))
 c(:,:)       = 10.0_b8
 cDelta(:,:)  =  0.0_b8
 cTime(:,:,:) =  0.0_b8
+! initalize boundary conditions
+do j = 1, sysSize(2)
+    c(sysSize(1),j) = c(1,j) + g * real(sysSize(1)-1)
+    write(*,*) c(sysSize(1),j)
+enddo
 
 call init_random_seed()
 
 ! time evolution of chemical concentration
 do n = 1, nfinal
     ! calculate cDelta for each lattice site
-    do i = 1, sysSize(1)
-        do j = 1, sysSize(2)
+    do i = 2, sysSize(1)-1
+        do j = 2, sysSize(2)-1
             cDelta(i,j) = getcDelta( i, j, c, sysSize)
         enddo
     enddo
     ! update c for each lattice site
-    do i = 1, sysSize(1)
-        do j = 1, sysSize(2)
+    do i = 2, sysSize(1)-1
+        do j = 2, sysSize(2)-1
             c(i,j) = dt * cDelta(i,j) + c(i,j)
             cTime(n,i,j) = c(i,j)
             ! write(*,*) c(i,j)
