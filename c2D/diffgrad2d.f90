@@ -7,7 +7,7 @@ implicit none
 
 integer,  parameter :: b8 = selected_real_kind(14)
 
-real(b8), parameter :: d  = 0.01_b8  ! diffusion coefficient
+real(b8), parameter :: d  = 1.00_b8  ! diffusion coefficient
 real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.001_b8 ! time-step size
 
@@ -19,11 +19,11 @@ real(b8), allocatable :: c(:,:), cDelta(:,:), cTime(:,:,:)
 ! additional lattice sites needed to create gradient
 nx = 3
 ny = 3
-sysSize(1) = nx + 2
-sysSize(2) = ny + 2
+sysSize(1) = nx + 2 ! this is the gradient direction
+sysSize(2) = ny
 
 ! number of time-steps to iterate over
-nfinal = 1000
+nfinal = 100000
 
 ! allocate arrays
 allocate( c( sysSize(1), sysSize(2)))
@@ -34,11 +34,17 @@ allocate( cTime( nfinal, sysSize(1), sysSize(2)))
 c(:,:)       = 10.0_b8
 cDelta(:,:)  =  0.0_b8
 cTime(:,:,:) =  0.0_b8
-! initalize boundary conditions
-do j = 1, sysSize(2)
-    c(sysSize(1),j) = c(1,j) + g * real(sysSize(1)-1)
-    write(*,*) c(sysSize(1),j)
+! initalize gradient
+do i = 2, sysSize(1)
+    do j = 1, sysSize(2)
+        c(i,j) = c(i,j) + g * real(i-1)
+    enddo
 enddo
+
+do i = 1, sysSize(1)
+    write(*,*) c(i,:), i
+enddo
+write(*,*)
 
 call init_random_seed()
 
@@ -46,18 +52,20 @@ call init_random_seed()
 do n = 1, nfinal
     ! calculate cDelta for each lattice site
     do i = 2, sysSize(1)-1
-        do j = 2, sysSize(2)-1
+        do j = 1, sysSize(2)
             cDelta(i,j) = getcDelta( i, j, c, sysSize)
         enddo
     enddo
     ! update c for each lattice site
     do i = 2, sysSize(1)-1
-        do j = 2, sysSize(2)-1
+        do j = 1, sysSize(2)
             c(i,j) = dt * cDelta(i,j) + c(i,j)
             cTime(n,i,j) = c(i,j)
             ! write(*,*) c(i,j)
         enddo
     enddo
+    cTime(n,1,:) = c(1,:)
+    cTime(n,sysSize(1),:) = c(sysSize(1),:)
 enddo
 
 do i = 1, sysSize(1)
@@ -67,10 +75,11 @@ do i = 1, sysSize(1)
 enddo
 
 write(*,*)
-! write(*,*) ' time series'
-! do i = 1, nfinal
-!     write(*,*) cTime(i,1,1)
-! enddo
+write(*,*) '   after nfinal: sweep across x   '
+do i = 1, sysSize(1)
+    write(*,*) sum(c(i,:)) / real(sysSize(2)), i
+enddo
+write(*,*)
 
 
 contains

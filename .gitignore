@@ -7,3 +7,5 @@ fort.*
 # no .mod files
 *.mod
 
+# no python files
+*.py
