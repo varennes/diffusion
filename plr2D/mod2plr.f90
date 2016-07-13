@@ -37,7 +37,7 @@ subroutine getMWPolar2( c, p, rSim, sigma, xcell)
         enddo
         ! normalize q vector and sample signal
         if( dot_product(q,q) /= 0.0 )then
-            ! write(*,*) ' q =',q, ' c =',c( xcell(nl,1), xcell(nl,2)), xcell(nl,1), xcell(nl,2) 
+            ! write(*,*) ' q =',q, ' c =',c( xcell(nl,1), xcell(nl,2)), xcell(nl,1), xcell(nl,2)
             q = q / sqrt( dot_product(q,q) )
             q = c( xcell(nl,1), xcell(nl,2)) * q
             qtot = qtot + q
@@ -107,7 +107,7 @@ subroutine wrtPlrTotal( nRun, N, p, tstep)
         py = py + p(i,2)
     enddo
     ! pT = sqrt( px**2 + py**2)
-    write(141,*) px, py, tstep, nRun
+    write(100+nRun,*) px, py, tstep
 
 end subroutine wrtPlrTotal
 

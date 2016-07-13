@@ -9,7 +9,7 @@ implicit none
 
 real(b8), parameter :: d  = 1.00_b8  ! diffusion coefficient
 real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
-real(b8), parameter :: dt = 0.001_b8 ! time-step size
+real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
 integer,  parameter :: nRunTotal = 2 ! total number of instances
 integer,  parameter :: ncell = 1    ! total number of cells
@@ -25,13 +25,13 @@ call init_random_seed()
 ! set system size
 ! additional lattice sites needed to create gradient
 nx = 10
-ny = 6
+ny = 10
 sysSize(1) = nx + 2 ! this is the gradient direction
 sysSize(2) = ny
 
 ! number of time-steps to iterate over
 nTfinal = 10 * int( real(syssize(2)**2) / (d*dt) )
-nTfinal = 30
+nTfinal = 100
 write(*,*) 'nTfinal =', nTfinal
 write(*,*)
 
@@ -108,6 +108,9 @@ do nRun = 1, nRunTotal
         !     write(*,*) c(i,:), i
         ! enddo
         ! write(*,*)
+        ! do j = 1, sysSize(2)
+        !     write(110,*) c(:,j) , n
+        ! enddo
         cTime(n,1,:) = c(1,:)
         cTime(n,sysSize(1),:) = c(sysSize(1),:)
         ! update polarization of each cell
@@ -163,7 +166,7 @@ contains
         ! calculate variance and sample noise
         cv = d * (cd + (4.0_b8) * c( i, j))
         ec = normal( 0.0_b8, sqrt(cv))
-        write(100,*) ec, cv
+        ! write(100,*) ec, cv
         ! caluclate cDelta
         cd = d * (cd - (4.0_b8) * c( i, j))
 

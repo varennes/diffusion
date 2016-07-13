@@ -9,3 +9,6 @@ fort.*
 
 # no python files
 *.py
+
+# no data directory
+plr2D/data
