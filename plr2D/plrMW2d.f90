@@ -11,95 +11,116 @@ real(b8), parameter :: d  = 1.00_b8  ! diffusion coefficient
 real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.001_b8 ! time-step size
 
-integer,  parameter :: ncell = 4     ! total number of cells
+integer,  parameter :: nRunTotal = 2 ! total number of instances
+integer,  parameter :: ncell = 1    ! total number of cells
 
-integer :: i, j, k, n, nx, ny, nfinal
+integer :: i, j, k, n, nx, ny, nTfinal, nRun
 integer :: sysSize(2), r0(2)
 integer,  allocatable :: sigma(:,:), xCell(:,:,:)
 real(b8), allocatable :: c(:,:), cDelta(:,:), cTime(:,:,:)
 real(b8), allocatable :: p(:,:)
 
+call init_random_seed()
+
 ! set system size
 ! additional lattice sites needed to create gradient
 nx = 10
-ny = 10
+ny = 6
 sysSize(1) = nx + 2 ! this is the gradient direction
 sysSize(2) = ny
 
 ! number of time-steps to iterate over
-nfinal = 10
+nTfinal = 10 * int( real(syssize(2)**2) / (d*dt) )
+nTfinal = 30
+write(*,*) 'nTfinal =', nTfinal
+write(*,*)
+
+! set cell parameters
+r0 = [ 2, 2] ! cell dimensions
+p  = 0.0_b8
 
 ! allocate arrays
 allocate( c( sysSize(1), sysSize(2)))
 allocate( cDelta( sysSize(1), sysSize(2)))
-allocate( cTime( nfinal, sysSize(1), sysSize(2)))
-
-! initialize concentration
-c(:,:)       = 10.0_b8 - g
-cDelta(:,:)  =  0.0_b8
-cTime(:,:,:) =  0.0_b8
-! initalize gradient
-do i = 2, sysSize(1)
-    do j = 1, sysSize(2)
-        c(i,j) = c(i,j) + g * real(i-1)
-    enddo
-enddo
-
-do i = 1, sysSize(1)
-    write(*,*) c(i,:), i
-enddo
-write(*,*)
-
-! initialize cluster of cells
-r0 = [ 2, 2] ! cell dimensions
+allocate( cTime( nTfinal, sysSize(1), sysSize(2)))
 allocate( sigma( sysSize(1), sysSize(2)))
-allocate( xCell( ncell, r0(1)*r0(2), 2))
+allocate( xCell( ncell, r0(1)*r0(2)*2, 2))
 allocate( p( ncell, 2))
 
-call itlSigmaRandom( ncell, r0, sysSize, sigma)
-call makeX( ncell, sysSize, sigma, xCell)
-write(*,*) 'sigma'
-do i = 1, sysSize(1)
-    write(*,*) sigma(i,:)
-enddo
-write(*,*)
-write(*,*) ' x'
-do i = 1, ncell
-    write(*,*) 'cell',i
-    do j = 1, r0(1)*r0(2)
-        write(*,*) xcell(i,j,:)
-    enddo
-    write(*,*)
-enddo
+! iterate over number of instances
+do nRun = 1, nRunTotal
 
-call init_random_seed()
-
-! time evolution of chemical concentration
-do n = 1, nfinal
-    ! calculate cDelta for each lattice site
-    do i = 2, sysSize(1)-1
+    ! initialize concentration
+    c(:,:)       = 10.0_b8 - g
+    cDelta(:,:)  =  0.0_b8
+    cTime(:,:,:) =  0.0_b8
+    ! initalize gradient
+    do i = 2, sysSize(1)
         do j = 1, sysSize(2)
-            cDelta(i,j) = getcDelta( i, j, c, sysSize)
+            c(i,j) = c(i,j) + g * real(i-1)
         enddo
     enddo
-    ! update c for each lattice site
-    do i = 2, sysSize(1)-1
-        do j = 1, sysSize(2)
-            c(i,j) = dt * cDelta(i,j) + c(i,j)
-            cTime(n,i,j) = c(i,j)
-            ! write(*,*) c(i,j)
+
+    ! do i = 1, sysSize(1)
+    !     write(*,*) c(i,:), i
+    ! enddo
+    ! write(*,*)
+
+    ! initialize cluster of cells
+    xcell = 0
+    call itlSigmaRandom( ncell, r0, sysSize, sigma)
+    call makeX( ncell, sysSize, sigma, xCell)
+    ! write(*,*) 'sigma'
+    ! do i = 1, sysSize(1)
+    !     write(*,*) sigma(i,:)
+    ! enddo
+    ! write(*,*)
+    ! write(*,*) ' x'
+    ! do i = 1, ncell
+    !     write(*,*) 'cell',i
+    !     do j = 1, r0(1)*r0(2)
+    !         write(*,*) xcell(i,j,:)
+    !     enddo
+    !     write(*,*)
+    ! enddo
+
+    ! time evolution of chemical concentration
+    do n = 1, nTfinal
+        ! calculate cDelta for each lattice site
+        do i = 2, sysSize(1)-1
+            do j = 1, sysSize(2)
+                cDelta(i,j) = getcDelta( i, j, c, sysSize)
+            enddo
         enddo
+        ! update c for each lattice site
+        do i = 2, sysSize(1)-1
+            do j = 1, sysSize(2)
+                c(i,j) = dt * cDelta(i,j) + c(i,j)
+                cTime(n,i,j) = c(i,j)
+                ! write(*,*) i,j, 'c =', c(i,j)
+                ! if ( c(i,j) /= c(i,j) ) then
+                !     write(*,*) i,j, 'c =', c(i,j)
+                ! end if
+            enddo
+        enddo
+        ! write(*,*)
+        ! do i = 1, sysSize(1)
+        !     write(*,*) c(i,:), i
+        ! enddo
+        ! write(*,*)
+        cTime(n,1,:) = c(1,:)
+        cTime(n,sysSize(1),:) = c(sysSize(1),:)
+        ! update polarization of each cell
+        do i = 1, ncell
+            ! write(*,*) i
+            call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
+        enddo
+        ! output total polarization
+        call wrtPlrTotal( nRun, ncell, p, n)
     enddo
-    cTime(n,1,:) = c(1,:)
-    cTime(n,sysSize(1),:) = c(sysSize(1),:)
-    ! update polarization of each cell
-    do i = 1, ncell
-        call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
-        write(*,*) p(i,:), i
-    enddo
-    ! output total polarization
-    call wrtPlrTotal( 1, ncell, p, n)
-enddo
+
+    write(*,*) 'instance', nRun, 'complete'
+enddo ! ends instances loop
 
 ! do i = 1, sysSize(1)
 !     do j = 1, sysSize(2)
@@ -108,7 +129,7 @@ enddo
 ! enddo
 
 write(*,*)
-write(*,*) '   after nfinal: sweep across x   '
+write(*,*) '   after nTfinal: sweep across x   '
 do i = 1, sysSize(1)
     write(*,*) sum(c(i,:)) / real(sysSize(2)), i
 enddo
