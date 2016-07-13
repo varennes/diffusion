@@ -17,7 +17,7 @@ integer,  parameter :: ncell = 1    ! total number of cells
 integer :: i, j, k, n, nx, ny, nTfinal, nRun
 integer :: sysSize(2), r0(2)
 integer,  allocatable :: sigma(:,:), xCell(:,:,:)
-real(b8), allocatable :: c(:,:), cDelta(:,:), cTime(:,:,:)
+real(b8), allocatable :: c(:,:), cDelta(:,:)
 real(b8), allocatable :: p(:,:)
 
 call init_random_seed()
@@ -28,21 +28,19 @@ nx = 10
 ny = 10
 sysSize(1) = nx + 2 ! this is the gradient direction
 sysSize(2) = ny
-
-! number of time-steps to iterate over
-nTfinal = 10 * int( real(syssize(2)**2) / (d*dt) )
-nTfinal = 100
-write(*,*) 'nTfinal =', nTfinal
-write(*,*)
-
 ! set cell parameters
 r0 = [ 2, 2] ! cell dimensions
 p  = 0.0_b8
 
+! number of time-steps to iterate over
+nTfinal = 10 * int( (real(r0(1))*real(ncell))**2 / (d*dt) )
+write(*,*) 'nTfinal =', nTfinal
+write(*,*)
+
+
 ! allocate arrays
 allocate( c( sysSize(1), sysSize(2)))
 allocate( cDelta( sysSize(1), sysSize(2)))
-allocate( cTime( nTfinal, sysSize(1), sysSize(2)))
 allocate( sigma( sysSize(1), sysSize(2)))
 allocate( xCell( ncell, r0(1)*r0(2)*2, 2))
 allocate( p( ncell, 2))
@@ -53,7 +51,6 @@ do nRun = 1, nRunTotal
     ! initialize concentration
     c(:,:)       = 10.0_b8 - g
     cDelta(:,:)  =  0.0_b8
-    cTime(:,:,:) =  0.0_b8
     ! initalize gradient
     do i = 2, sysSize(1)
         do j = 1, sysSize(2)
@@ -96,7 +93,6 @@ do nRun = 1, nRunTotal
         do i = 2, sysSize(1)-1
             do j = 1, sysSize(2)
                 c(i,j) = dt * cDelta(i,j) + c(i,j)
-                cTime(n,i,j) = c(i,j)
                 ! write(*,*) i,j, 'c =', c(i,j)
                 ! if ( c(i,j) /= c(i,j) ) then
                 !     write(*,*) i,j, 'c =', c(i,j)
@@ -111,8 +107,6 @@ do nRun = 1, nRunTotal
         ! do j = 1, sysSize(2)
         !     write(110,*) c(:,j) , n
         ! enddo
-        cTime(n,1,:) = c(1,:)
-        cTime(n,sysSize(1),:) = c(sysSize(1),:)
         ! update polarization of each cell
         do i = 1, ncell
             ! write(*,*) i
@@ -130,14 +124,10 @@ enddo ! ends instances loop
 !         write(*,*) sum(cTime(:,i,j)) / real(nfinal)
 !     enddo
 ! enddo
-
-write(*,*)
-write(*,*) '   after nTfinal: sweep across x   '
-do i = 1, sysSize(1)
-    write(*,*) sum(c(i,:)) / real(sysSize(2)), i
-enddo
-write(*,*)
-
+open(unit=10, file="param.dat", action="write")
+write(10,*) ncell
+write(10,*) nRunTotal
+close(10)
 
 contains
     ! calculate cDelta
