@@ -74,7 +74,7 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
     dr(5,:) = [ 0, 0, 1]
     dr(6,:) = [ 0, 0,-1]
 
-    center(1) = rSim(1)/2 + 1
+    center(1) = (rSim(1)-2)/2 + 2
     center(2) = rSim(2)/2 + 1
     center(3) = rSim(3)/2 + 1
     cell1(1)  = center(1) - r0(1)/2
@@ -82,6 +82,10 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
     cell1(3)  = center(3) - r0(3)/2
 
     sigma( cell1(1):cell1(1)+r0(1)-1, cell1(2):cell1(2)+r0(2)-1, cell1(3):cell1(3)+r0(3)-1) = 1
+    ! write(*,*) 'cellGrid(1) =', cellGrid(1,:)
+    ! write(*,*) 'x',cell1(1),':',cell1(1)+r0(1)-1
+    ! write(*,*) 'y',cell1(2),':',cell1(2)+r0(2)-1
+    ! write(*,*) 'z',cell1(3),':',cell1(3)+r0(3)-1
 
     i = 1
     k = 1
@@ -91,18 +95,19 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
         endif
 
         call random_number(r)
-        j = 1 + floor(r*6)
+        j = 1 + floor(r*6.0)
 
         do count = 1, 6
             if( k >= N )then
                 exit
             endif
-
             if( ocpyGrid( cellGrid(i,1)+dr(j,1), cellGrid(i,2)+dr(j,2), cellGrid(i,3)+dr(j,3)) == 0 )then
                 k = k + 1
                 cellGrid(k,1) = cellGrid(i,1)+dr(j,1)
                 cellGrid(k,2) = cellGrid(i,2)+dr(j,2)
                 cellGrid(k,3) = cellGrid(i,3)+dr(j,3)
+                ! write(*,*) 'dr =',dr(j,:)
+                ! write(*,*) 'k =', k,'cellGrid =',cellGrid(k,:)
 
                 ocpyGrid( cellGrid(k,1), cellGrid(k,2), cellGrid(k,3)) = k
             endif
@@ -115,22 +120,27 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
     enddo
 
     do k = 2, N
-        i = cellGrid(1,1) - cellGrid(k,1) ! grid space distance from cell 1
-        j = cellGrid(1,1) - cellGrid(k,2)
-        l = cellGrid(1,3) - cellGrid(k,3)
+        i = cellGrid(k,1) - cellGrid(1,1) ! grid space distance from cell 1
+        j = cellGrid(k,2) - cellGrid(1,2)
+        l = cellGrid(k,3) - cellGrid(1,3)
 
         cellk(1) = cell1(1) + i*r0(1)
         cellk(2) = cell1(2) + j*r0(2)
-        cellk(3) = cell1(3) + j*r0(3)
+        cellk(3) = cell1(3) + l*r0(3)
+
+        ! write(*,*) 'grid dist',i,j,l,' cellk',cellk
 
         if ( cellk(1) < 1 .OR. (cellk(1)+r0(1)-1) > rSim(1) ) then
             write(*,*) 'Cells out of bounds! You done goofed!'
+            write(*,*) '1', cellk(1),cellk(1)+r0(1)-1, 'rSim(1)=',rSim(1)
             exit
-        elseif ( cellk(2) < 1 .OR. (cellk(2)+r0(1)-1) > rSim(2) ) then
+        elseif ( cellk(2) < 1 .OR. (cellk(2)+r0(2)-1) > rSim(2) ) then
             write(*,*) 'Cells out of bounds! You done goofed!'
+            write(*,*) '2', cellk(2),cellk(2)+r0(2)-1, 'rSim(2)=',rSim(2)
             exit
         elseif ( cellk(3) < 1 .OR. (cellk(3)+r0(3)-1) > rSim(3) ) then
             write(*,*) 'Cells out of bounds! You done goofed!'
+            write(*,*) '3', cellk(3),cellk(3)+r0(3)-1, 'rSim(3)=',rSim(3)
             exit
         endif
 

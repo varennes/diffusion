@@ -12,7 +12,7 @@ real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
 integer,  parameter :: nRunTotal = 1 ! total number of instances
-integer,  parameter :: ncell = 2    ! total number of cells
+integer,  parameter :: ncell = 5    ! total number of cells
 
 integer :: i, j, k, n, n1, n2, nTfinal, nRun
 integer :: sysSize(3), r0(3)
@@ -23,8 +23,8 @@ real(b8), allocatable :: p(:,:)
 call init_random_seed()
 
 ! set system size
-n1 = 5
-n2 = 5
+n1 = 6
+n2 = 6
 ! additional lattice sites needed to create gradient
 ! system is symmetric perpendicular to gradient
 sysSize(1) = n1 + 2 ! this is the gradient direction
@@ -35,7 +35,7 @@ r0 = [ 2, 2, 2] ! cell dimensions
 
 ! number of time-steps to iterate over
 nTfinal = 10 * int( (real(r0(1))*(real(ncell)**(0.333)))**2 / (d*dt) )
-nTfinal = 100
+nTfinal = 10
 write(*,*) 'nTfinal =', nTfinal
 write(*,*)
 
@@ -70,7 +70,7 @@ do nRun = 1, nRunTotal
     ! write(*,*)
 
     ! initialize cluster of cells
-    ! xcell = 0
+    xcell = 0
     call itlSigmaRandom( ncell, r0, sysSize, sigma)
     call makeX( ncell, sysSize, sigma, xCell)
     write(*,*) 'sigma'
