@@ -12,7 +12,7 @@ real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
 integer,  parameter :: nRunTotal = 1 ! total number of instances
-integer,  parameter :: ncell = 1    ! total number of cells
+integer,  parameter :: ncell = 2    ! total number of cells
 
 integer :: i, j, k, n, n1, n2, nTfinal, nRun
 integer :: sysSize(3), r0(3)
@@ -23,8 +23,8 @@ real(b8), allocatable :: p(:,:)
 call init_random_seed()
 
 ! set system size
-n1 = 10
-n2 = 10
+n1 = 5
+n2 = 5
 ! additional lattice sites needed to create gradient
 ! system is symmetric perpendicular to gradient
 sysSize(1) = n1 + 2 ! this is the gradient direction
@@ -71,21 +71,25 @@ do nRun = 1, nRunTotal
 
     ! initialize cluster of cells
     ! xcell = 0
-    ! call itlSigmaRandom( ncell, r0, sysSize, sigma)
-    ! call makeX( ncell, sysSize, sigma, xCell)
-    ! write(*,*) 'sigma'
-    ! do i = 1, sysSize(1)
-    !     write(*,*) sigma(i,:)
-    ! enddo
-    ! write(*,*)
-    ! write(*,*) ' x'
-    ! do i = 1, ncell
-    !     write(*,*) 'cell',i
-    !     do j = 1, r0(1)*r0(2)
-    !         write(*,*) xcell(i,j,:)
-    !     enddo
-    !     write(*,*)
-    ! enddo
+    call itlSigmaRandom( ncell, r0, sysSize, sigma)
+    call makeX( ncell, sysSize, sigma, xCell)
+    write(*,*) 'sigma'
+    do i = 1, sysSize(1)
+        write(*,*) ' x =', i,'plane'
+        do j = 1, sysSize(2)
+            write(*,*) sigma(i,j,:)
+        enddo
+        write(*,*)
+    enddo
+    write(*,*)
+    write(*,*) ' coordinates of cell pixels'
+    do i = 1, ncell
+        write(*,*) 'cell',i
+        do j = 1, r0(1)*r0(2)*r0(3)
+            write(*,*) xcell(i,j,:)
+        enddo
+        write(*,*)
+    enddo
 
     ! time evolution of chemical concentration
     do n = 1, nTfinal
@@ -114,25 +118,24 @@ do nRun = 1, nRunTotal
         !     write(*,*) c(i,:), i
         ! enddo
         ! write(*,*)
-        ! concentration averaged over 3rd dimension
-        do j = 1, sysSize(2)
-            do i = 1, sysSize(1)
-                write(110,"(F8.3)", advance="no") sum(c(i,j,1:sysSize(3)))/real(sysSize(3))
-            enddo
-            write(110,"(I3)", advance="no") n
-            write(110,*) ''
-        enddo
-        ! concentration averaged over 2nd dimension
-        do k = 1, sysSize(3)
-            do i = 1, sysSize(1)
-                write(120,"(F8.3)", advance="no") sum(c(i,1:sysSize(2),k))/real(sysSize(2))
-            enddo
-            write(120,"(I3)", advance="no") n
-            write(120,*) ''
-        enddo
-        ! do j = 1, sysSize(3)
-        !     write(110,*) c(:,j) , n
+
+        ! ! concentration averaged over 3rd dimension
+        ! do j = 1, sysSize(2)
+        !     do i = 1, sysSize(1)
+        !         write(110,"(F8.3)", advance="no") sum(c(i,j,1:sysSize(3)))/real(sysSize(3))
+        !     enddo
+        !     write(110,"(I3)", advance="no") n
+        !     write(110,*) ''
         ! enddo
+        ! ! concentration averaged over 2nd dimension
+        ! do k = 1, sysSize(3)
+        !     do i = 1, sysSize(1)
+        !         write(120,"(F8.3)", advance="no") sum(c(i,1:sysSize(2),k))/real(sysSize(2))
+        !     enddo
+        !     write(120,"(I3)", advance="no") n
+        !     write(120,*) ''
+        ! enddo
+
         ! update polarization of each cell
         ! if ( mod( n, 10) == 0 ) then
         !     do i = 1, ncell

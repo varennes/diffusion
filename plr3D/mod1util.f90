@@ -15,10 +15,10 @@ subroutine makeX( N, rSim, sigma, x)
     ! lsCount = array that keeps track the number of lattice sites
     implicit none
     integer, intent(in) :: N
-    integer, intent(in),  dimension(2)     :: rSim
-    integer, intent(in),  dimension(:,:)   :: sigma
+    integer, intent(in),  dimension(3)     :: rSim
+    integer, intent(in),  dimension(:,:,:)   :: sigma
     integer, intent(out), dimension(:,:,:) :: x
-    integer :: cellIndex, i, nx, ny
+    integer :: cellIndex, i, nx, ny, nz
     integer, allocatable :: lsCount(:)
 
     allocate( lsCount(N) )
@@ -27,14 +27,15 @@ subroutine makeX( N, rSim, sigma, x)
 
     do nx = 1, rSim(1)
         do ny = 1, rSim(2)
-            if( sigma(nx,ny) /= 0 )then
+            do nz = 1, rsim(3)
+                if( sigma(nx,ny,nz) /= 0 )then
+                    cellIndex = sigma(nx,ny,nz)
+                    lsCount(cellIndex) = lsCount(cellIndex) + 1
 
-                cellIndex = sigma(nx,ny)
-                lsCount(cellIndex) = lsCount(cellIndex) + 1
-
-                i = lsCount(cellIndex)
-                x(cellIndex,i,:) = [nx,ny]
-            endif
+                    i = lsCount(cellIndex)
+                    x(cellIndex,i,:) = [nx,ny,nz]
+                endif
+            enddo
         enddo
     enddo
 
@@ -49,34 +50,38 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
     ! sigma = array of cell labels
     implicit none
     integer, intent(in) :: N
-    integer, intent(in),    dimension(2)   :: r0, rSim
-    integer, intent(inout), dimension(:,:) :: sigma
-    integer, allocatable :: cellGrid(:,:), ocpyGrid(:,:)
-    integer, dimension(4,2) :: dr
-    integer, dimension(2) :: center, cell1, cellk
-    integer :: count, i, j, k
+    integer, intent(in),    dimension(3)   :: r0, rSim
+    integer, intent(inout), dimension(:,:,:) :: sigma
+    integer, allocatable :: cellGrid(:,:), ocpyGrid(:,:,:)
+    integer, dimension(6,3) :: dr
+    integer, dimension(3) :: center, cell1, cellk
+    integer :: count, i, j, k, l
     real(b8) :: r
 
-    allocate( cellGrid(N,2) )
-    allocate( ocpyGrid(N+1,N+1) )
+    allocate( cellGrid(N,3) )
+    allocate( ocpyGrid(N+1,N+1,N+1) )
 
     sigma    = 0
     cellGrid = 0
     ocpyGrid = 0
-    ocpyGrid(N/2+1,N/2+1) = 1
-    cellGrid(1,:) = [ N/2+1, N/2+1]
+    ocpyGrid(N/2+1,N/2+1,N/2+1) = 1
+    cellGrid(1,:) = [ N/2+1, N/2+1, N/2+1]
 
-    dr(1,:) = [ 1, 0]
-    dr(2,:) = [ 0, 1]
-    dr(3,:) = [-1, 0]
-    dr(4,:) = [ 0,-1]
+    dr(1,:) = [ 1, 0, 0]
+    dr(2,:) = [ 0, 1, 0]
+    dr(3,:) = [-1, 0, 0]
+    dr(4,:) = [ 0,-1, 0]
+    dr(5,:) = [ 0, 0, 1]
+    dr(6,:) = [ 0, 0,-1]
 
     center(1) = rSim(1)/2 + 1
     center(2) = rSim(2)/2 + 1
+    center(3) = rSim(3)/2 + 1
     cell1(1)  = center(1) - r0(1)/2
     cell1(2)  = center(2) - r0(2)/2
+    cell1(3)  = center(3) - r0(3)/2
 
-    sigma( cell1(1):cell1(1)+r0(1)-1, cell1(2):cell1(2)+r0(2)-1) = 1
+    sigma( cell1(1):cell1(1)+r0(1)-1, cell1(2):cell1(2)+r0(2)-1, cell1(3):cell1(3)+r0(3)-1) = 1
 
     i = 1
     k = 1
@@ -86,23 +91,24 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
         endif
 
         call random_number(r)
-        j = 1 + floor(r*4)
+        j = 1 + floor(r*6)
 
-        do count = 1, 4
+        do count = 1, 6
             if( k >= N )then
                 exit
             endif
 
-            if( ocpyGrid( cellGrid(i,1)+dr(j,1), cellGrid(i,2)+dr(j,2)) == 0 )then
+            if( ocpyGrid( cellGrid(i,1)+dr(j,1), cellGrid(i,2)+dr(j,2), cellGrid(i,3)+dr(j,3)) == 0 )then
                 k = k + 1
                 cellGrid(k,1) = cellGrid(i,1)+dr(j,1)
                 cellGrid(k,2) = cellGrid(i,2)+dr(j,2)
+                cellGrid(k,3) = cellGrid(i,3)+dr(j,3)
 
-                ocpyGrid( cellGrid(k,1), cellGrid(k,2)) = k
+                ocpyGrid( cellGrid(k,1), cellGrid(k,2), cellGrid(k,3)) = k
             endif
 
             j = j + 1
-            if( j > 4 )then
+            if( j > 6 )then
                 j = 1
             endif
         enddo
@@ -111,20 +117,24 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
     do k = 2, N
         i = cellGrid(1,1) - cellGrid(k,1) ! grid space distance from cell 1
         j = cellGrid(1,1) - cellGrid(k,2)
+        l = cellGrid(1,3) - cellGrid(k,3)
 
         cellk(1) = cell1(1) + i*r0(1)
         cellk(2) = cell1(2) + j*r0(2)
+        cellk(3) = cell1(3) + j*r0(3)
 
-        if( cellk(1) < 2 .OR. (cellk(1)+r0(1)-1) > rSim(1)+1 )then
+        if ( cellk(1) < 1 .OR. (cellk(1)+r0(1)-1) > rSim(1) ) then
+            write(*,*) 'Cells out of bounds! You done goofed!'
+            exit
+        elseif ( cellk(2) < 1 .OR. (cellk(2)+r0(1)-1) > rSim(2) ) then
+            write(*,*) 'Cells out of bounds! You done goofed!'
+            exit
+        elseif ( cellk(3) < 1 .OR. (cellk(3)+r0(3)-1) > rSim(3) ) then
             write(*,*) 'Cells out of bounds! You done goofed!'
             exit
         endif
-        if( cellk(2) < 2 .OR. (cellk(2)+r0(1)-1) > rSim(2)+1 )then
-            write(*,*) 'Cells out of bounds! You done goofed!'
-            exit
-        endif
 
-        sigma( cellk(1):cellk(1)+r0(1)-1, cellk(2):cellk(2)+r0(2)-1) = k
+        sigma( cellk(1):cellk(1)+r0(1)-1, cellk(2):cellk(2)+r0(2)-1, cellk(3):cellk(3)+r0(3)-1) = k
     enddo
 
 end subroutine itlSigmaRandom
