@@ -150,42 +150,6 @@ subroutine itlSigmaRandom( N, r0, rSim, sigma)
 end subroutine itlSigmaRandom
 
 
-
-
-subroutine itlEdge( edge, ne, rSim, sigma)
-    ! edge = array of lattice sites with diff. sigma neighbors
-    implicit none
-    integer, intent(out) :: ne
-    integer, intent(out), dimension(:,:) :: edge
-    integer, intent(in),  dimension(2)   :: rSim
-    integer, intent(in),  dimension(:,:) :: sigma
-    integer, dimension(2) :: nn
-    integer :: i1, i2, j, k
-
-    ne = 1
-    edge = 0
-
-    do i1 = 1, rSim(1) + 2
-    do i2 = 1, rSim(2) + 2
-        do k = 1, 4
-            call nnGet( k, nn, rSim, [i1,i2])
-
-            if( nn(1) == 0 )then
-                cycle
-            endif
-            if( sigma(nn(1),nn(2)) /= sigma(i1,i2) )then
-                edge(ne,:) = [i1,i2]
-                ne = ne + 1
-                exit
-            endif
-        enddo
-    enddo
-    enddo
-    ne = ne - 1
-
-end subroutine itlEdge
-
-
 ! calculate center of mass of the group of cells
 subroutine calcXCOM( N, x, xCOMt)
     ! N = total number of cells
@@ -224,38 +188,49 @@ subroutine nnGet( i, nn, rSim, x)
     ! i = 2 -- nn right
     ! i = 3 -- nn down
     ! i = 4 -- nn left
+    ! i = 5 -- nn front
+    ! i = 6 -- nn back
     ! nn = array of nearest neighbor coordinates
     ! rSim = dimensions of simulation space
     ! x = coordinates of point
     implicit none
     integer, intent(in) :: i
-    integer, dimension(2), intent(in) :: rSim, x
-    integer, dimension(2), intent(out) :: nn
+    integer, dimension(3), intent(in) :: rSim, x
+    integer, dimension(3), intent(out) :: nn
 
     if( i == 1 )then
         nn(1) = x(1) + 1
         nn(2) = x(2)
-
+        nn(3) = x(3)
     elseif( i == 2 )then
         nn(1) = x(1)
         nn(2) = x(2) + 1
-
+        nn(3) = x(3)
     elseif( i == 3 )then
         nn(1) = x(1) - 1
         nn(2) = x(2)
-
+        nn(3) = x(3)
     elseif( i == 4 )then
         nn(1) = x(1)
         nn(2) = x(2) - 1
-
+        nn(3) = x(3)
+    elseif( i == 5 )then
+        nn(1) = x(1)
+        nn(2) = x(2)
+        nn(3) = x(3) + 1
+    elseif( i == 6 )then
+        nn(1) = x(1)
+        nn(2) = x(2)
+        nn(3) = x(3) - 1
     endif
 
-    if( nn(1) > (rSim(1) + 2) .OR. nn(1) < 1 )then
-        nn = [ 0, 0]
-    elseif( nn(2) > (rSim(2) + 2) .OR. nn(2) < 1 )then
-        nn = [ 0, 0]
+    if( nn(1) > rSim(1) .OR. nn(1) < 1 )then
+        nn = [ 0, 0, 0]
+    elseif( nn(2) > rSim(2) .OR. nn(2) < 1 )then
+        nn = [ 0, 0, 0]
+    elseif( nn(3) > rSim(3) .OR. nn(3) < 1 )then
+        nn = [ 0, 0, 0]
     endif
-
 end subroutine nnGet
 
 

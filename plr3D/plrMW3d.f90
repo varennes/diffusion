@@ -73,23 +73,23 @@ do nRun = 1, nRunTotal
     xcell = 0
     call itlSigmaRandom( ncell, r0, sysSize, sigma)
     call makeX( ncell, sysSize, sigma, xCell)
-    write(*,*) 'sigma'
-    do i = 1, sysSize(1)
-        write(*,*) ' x =', i,'plane'
-        do j = 1, sysSize(2)
-            write(*,*) sigma(i,j,:)
-        enddo
-        write(*,*)
-    enddo
-    write(*,*)
-    write(*,*) ' coordinates of cell pixels'
-    do i = 1, ncell
-        write(*,*) 'cell',i
-        do j = 1, r0(1)*r0(2)*r0(3)
-            write(*,*) xcell(i,j,:)
-        enddo
-        write(*,*)
-    enddo
+    ! write(*,*) 'sigma'
+    ! do i = 1, sysSize(1)
+    !     write(*,*) ' x =', i,'plane'
+    !     do j = 1, sysSize(2)
+    !         write(*,*) sigma(i,j,:)
+    !     enddo
+    !     write(*,*)
+    ! enddo
+    ! write(*,*)
+    ! write(*,*) ' coordinates of cell pixels'
+    ! do i = 1, ncell
+    !     write(*,*) 'cell',i
+    !     do j = 1, r0(1)*r0(2)*r0(3)
+    !         write(*,*) xcell(i,j,:)
+    !     enddo
+    !     write(*,*)
+    ! enddo
 
     ! time evolution of chemical concentration
     do n = 1, nTfinal
@@ -137,13 +137,14 @@ do nRun = 1, nRunTotal
         ! enddo
 
         ! update polarization of each cell
-        ! if ( mod( n, 10) == 0 ) then
-        !     do i = 1, ncell
-        !         call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
-        !     enddo
-        !     ! output total polarization
-        !     call wrtPlrTotal( nRun, ncell, p, n)
-        ! endif
+        if ( mod( n, 10) == 0 ) then
+            do i = 1, ncell
+                call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
+                ! call getMWPolar( p(i,:), c, xCell(i,:,:))
+            enddo
+            ! output total polarization
+            call wrtPlrTotal( nRun, ncell, p, n)
+        endif
     enddo
 
     write(*,*) 'instance', nRun, 'complete'
