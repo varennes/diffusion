@@ -1,5 +1,5 @@
 program plrMW2D
-! diffusion on a 2d lattice
+! diffusion on a 3d lattice
 ! a constant gradient is imposed by special boundary conditions
 ! cells are polarized using MW
 use utility
@@ -11,62 +11,68 @@ real(b8), parameter :: d  = 1.00_b8  ! diffusion coefficient
 real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
-integer,  parameter :: nRunTotal = 2 ! total number of instances
+integer,  parameter :: nRunTotal = 1 ! total number of instances
 integer,  parameter :: ncell = 1    ! total number of cells
 
-integer :: i, j, k, n, nx, ny, nTfinal, nRun
-integer :: sysSize(2), r0(2)
-integer,  allocatable :: sigma(:,:), xCell(:,:,:)
-real(b8), allocatable :: c(:,:), cDelta(:,:)
+integer :: i, j, k, n, n1, n2, nTfinal, nRun
+integer :: sysSize(3), r0(3)
+integer,  allocatable :: sigma(:,:,:), xCell(:,:,:)
+real(b8), allocatable :: c(:,:,:), cDelta(:,:,:)
 real(b8), allocatable :: p(:,:)
 
 call init_random_seed()
 
 ! set system size
+n1 = 10
+n2 = 10
 ! additional lattice sites needed to create gradient
-nx = 10
-ny = 10
-sysSize(1) = nx + 2 ! this is the gradient direction
-sysSize(2) = ny
+! system is symmetric perpendicular to gradient
+sysSize(1) = n1 + 2 ! this is the gradient direction
+sysSize(2) = n2
+sysSize(3) = n2
 ! set cell parameters
-r0 = [ 2, 2] ! cell dimensions
-p  = 0.0_b8
+r0 = [ 2, 2, 2] ! cell dimensions
 
 ! number of time-steps to iterate over
-nTfinal = 10 * int( (real(r0(1))*sqrt(real(ncell)))**2 / (d*dt) )
+nTfinal = 10 * int( (real(r0(1))*(real(ncell)**(0.333)))**2 / (d*dt) )
+nTfinal = 100
 write(*,*) 'nTfinal =', nTfinal
 write(*,*)
 
 
 ! allocate arrays
-allocate( c( sysSize(1), sysSize(2)))
-allocate( cDelta( sysSize(1), sysSize(2)))
-allocate( sigma( sysSize(1), sysSize(2)))
-allocate( xCell( ncell, r0(1)*r0(2)*2, 2))
-allocate( p( ncell, 2))
+allocate( c( sysSize(1), sysSize(2), sysSize(3)))
+allocate( cDelta( sysSize(1), sysSize(2), sysSize(3)))
+allocate( sigma( sysSize(1), sysSize(2), sysSize(3)))
+allocate( xCell( ncell, r0(1)*r0(2)*r0(3)*2, 3))
+allocate( p( ncell, 3))
 
 ! iterate over number of instances
 do nRun = 1, nRunTotal
 
+    ! initialize polarization
+    p = 0.0_b8
     ! initialize concentration
-    c(:,:)       = 10.0_b8 - g
-    cDelta(:,:)  =  0.0_b8
+    c(:,:,:)      = 10.0_b8 - g
+    cDelta(:,:,:) =  0.0_b8
     ! initalize gradient
     do i = 2, sysSize(1)
         do j = 1, sysSize(2)
-            c(i,j) = c(i,j) + g * real(i-1)
+        do k = 1, sysSize(3)
+            c(i,j,k) = c(i,j,k) + g * real(i-1)
+        enddo
         enddo
     enddo
 
     ! do i = 1, sysSize(1)
-    !     write(*,*) c(i,:), i
+    !     write(*,*) c(i,:,1), i
     ! enddo
     ! write(*,*)
 
     ! initialize cluster of cells
-    xcell = 0
-    call itlSigmaRandom( ncell, r0, sysSize, sigma)
-    call makeX( ncell, sysSize, sigma, xCell)
+    ! xcell = 0
+    ! call itlSigmaRandom( ncell, r0, sysSize, sigma)
+    ! call makeX( ncell, sysSize, sigma, xCell)
     ! write(*,*) 'sigma'
     ! do i = 1, sysSize(1)
     !     write(*,*) sigma(i,:)
@@ -86,17 +92,21 @@ do nRun = 1, nRunTotal
         ! calculate cDelta for each lattice site
         do i = 2, sysSize(1)-1
             do j = 1, sysSize(2)
-                cDelta(i,j) = getcDelta( i, j, c, sysSize)
+            do k = 1, sysSize(3)
+                cDelta(i,j,k) = getcDelta( i, j, k, c, sysSize)
+            enddo
             enddo
         enddo
         ! update c for each lattice site
         do i = 2, sysSize(1)-1
             do j = 1, sysSize(2)
-                c(i,j) = dt * cDelta(i,j) + c(i,j)
+            do k = 1, sysSize(3)
+                c(i,j,k) = dt * cDelta(i,j,k) + c(i,j,k)
                 ! write(*,*) i,j, 'c =', c(i,j)
                 ! if ( c(i,j) /= c(i,j) ) then
                 !     write(*,*) i,j, 'c =', c(i,j)
                 ! end if
+            enddo
             enddo
         enddo
         ! write(*,*)
@@ -104,27 +114,38 @@ do nRun = 1, nRunTotal
         !     write(*,*) c(i,:), i
         ! enddo
         ! write(*,*)
-        ! do j = 1, sysSize(2)
+        ! concentration averaged over 3rd dimension
+        do j = 1, sysSize(2)
+            do i = 1, sysSize(1)
+                write(110,"(F8.3)", advance="no") sum(c(i,j,1:sysSize(3)))/real(sysSize(3))
+            enddo
+            write(110,"(I3)", advance="no") n
+            write(110,*) ''
+        enddo
+        ! concentration averaged over 2nd dimension
+        do k = 1, sysSize(3)
+            do i = 1, sysSize(1)
+                write(120,"(F8.3)", advance="no") sum(c(i,1:sysSize(2),k))/real(sysSize(2))
+            enddo
+            write(120,"(I3)", advance="no") n
+            write(120,*) ''
+        enddo
+        ! do j = 1, sysSize(3)
         !     write(110,*) c(:,j) , n
         ! enddo
         ! update polarization of each cell
-        if ( mod( n, 10) == 0 ) then
-            do i = 1, ncell
-                call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
-            enddo
-            ! output total polarization
-            call wrtPlrTotal( nRun, ncell, p, n)
-        endif
+        ! if ( mod( n, 10) == 0 ) then
+        !     do i = 1, ncell
+        !         call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
+        !     enddo
+        !     ! output total polarization
+        !     call wrtPlrTotal( nRun, ncell, p, n)
+        ! endif
     enddo
 
     write(*,*) 'instance', nRun, 'complete'
 enddo ! ends instances loop
 
-! do i = 1, sysSize(1)
-!     do j = 1, sysSize(2)
-!         write(*,*) sum(cTime(:,i,j)) / real(nfinal)
-!     enddo
-! enddo
 open(unit=10, file="param.dat", action="write")
 write(10,*) ncell
 write(10,*) nRunTotal
@@ -132,34 +153,41 @@ close(10)
 
 contains
     ! calculate cDelta
-    real(b8) function getcDelta( i, j, c, sysSize)
+    real(b8) function getcDelta( i, j, k, c, sysSize)
         implicit none
-        integer,  intent(in) :: i, j, sysSize(2)
-        real(b8), intent(in) :: c(:,:)
+        integer,  intent(in) :: i, j, k, sysSize(3)
+        real(b8), intent(in) :: c(:,:,:)
         real(b8) :: cd, cv, ec
         cd = 0.0_b8
         cv = 0.0_b8
         ! check for periodic boundaries
         if ( i == 1 ) then
-            cd = c( i+1, j) + c( sysSize(1), j) + cd
+            cd = c( i+1, j, k) + c( sysSize(1), j, k) + cd
         elseif ( i == sysSize(1) ) then
-            cd = c( 1, j) + c( i-1, j) + cd
+            cd = c( 1, j, k) + c( i-1, j, k) + cd
         else
-            cd = c( i+1, j) + c( i-1, j) + cd
+            cd = c( i+1, j, k) + c( i-1, j, k) + cd
         end if
         if ( j == 1 ) then
-            cd = c( i, j+1) + c( i, sysSize(2)) + cd
+            cd = c( i, j+1, k) + c( i, sysSize(2), k) + cd
         elseif ( j == sysSize(2) ) then
-            cd = c( i, 1) + c( i, j-1) + cd
+            cd = c( i, 1, k) + c( i, j-1, k) + cd
         else
-            cd = c( i, j+1) + c( i, j-1) + cd
+            cd = c( i, j+1, k) + c( i, j-1, k) + cd
+        endif
+        if ( k == 1 ) then
+            cd = c( i, j, k+1) + c( i, j, sysSize(3)) + cd
+        elseif ( k == sysSize(3) ) then
+            cd = c( i, j, 1) + c( i, j, k-1) + cd
+        else
+            cd = c( i, j, k+1) + c( i, j, k-1) + cd
         end if
         ! calculate variance and sample noise
-        cv = d * (cd + (4.0_b8) * c( i, j))
+        cv = d * (cd + (6.0_b8) * c( i, j, k))
         ec = normal( 0.0_b8, sqrt(cv))
         ! write(100,*) ec, cv
         ! caluclate cDelta
-        cd = d * (cd - (4.0_b8) * c( i, j))
+        cd = d * (cd - (6.0_b8) * c( i, j, k))
 
         getcDelta = cd + ec
     end function getcDelta
