@@ -90,6 +90,72 @@ subroutine getMWPolar( p, c, xcell)
 end subroutine getMWPolar
 
 
+! EC mechanism for assigning cell polarization vectors
+! repulsion vectors are weighted by difference of local concentration to that at
+! the center of the cluster. Polarization vectors are adaptive.
+subroutine getECPolar( iCell, N, c, g, p, rSim, sigma, x)
+    implicit none
+    integer,  intent(in) :: iCell, N
+    real(b8), intent(in) :: g
+    real(b8), intent(in), dimension(:,:)   :: c
+    real(b8), intent(inout), dimension(2)  :: p
+    integer,  intent(in), dimension(2)     :: rSim
+    integer,  intent(in), dimension(:,:)   :: sigma
+    integer,  intent(in), dimension(:,:,:) :: x
+    real(b8), dimension(N,2) :: com
+    real(b8), dimension(2) :: clstCOM, q, qtmp
+    integer,  dimension(N) :: nnL
+    integer  :: i, j, k, nl, nlSum, P1, P2
+    real(b8) :: msCOM, s
+
+    ! calculate COM of cluster
+    nlSum   = 0
+    clstCOM = 0.0_b8
+    do i = 1, N
+        nl = 1
+        do while ( x(i,nl,1) /= 0 )
+            do k = 1, 2
+                clstCOM(k) = clstCOM(k) + real(x(i,nl,k))
+            enddo
+            nl = nl + 1
+        enddo
+        nlSum = nlSum + nl
+    enddo
+    clstCOM = clstCOM / real(nlSum)
+    ! get mean signal at cluster COM
+    msCOM  = c(1,1) + g * (clstCOM(1) - 1.0_b8)
+    write(*,*) 'clstCOM =',clstCOM,' msCOM =',msCOM
+
+    ! calulcate com of each cell
+    do i = 1, N
+        call calcCellCOM( x(i,:,:), com(i,:))
+    enddo
+
+    ! calculate cell perimeter and enclusure
+    call getContactL( iCell, N, nnL, rSim, sigma, x(iCell,:,:))
+    P1 = int(perimCalc(rSim, sigma, x(iCell,:,:)))
+    P2 = sum(nnL)
+    if( P1 /= P2 )then
+        ! calculate repulsion vector
+        do j = 1, N
+            if( nnL(j) /= 0 )then
+                qtmp = com(i,:) - com(j,:)
+                qtmp = qtmp / sqrt( dot_product( qtmp, qtmp))
+                q(:) = q(:) + real(nnL(j)) * qtmp
+            endif
+        enddo
+        if( dot_product( q, q) /= 0.0 )then
+            q = q / sqrt( dot_product( q, q))
+        endif
+        ! get signal value at cell COM
+        s = c( nint(com(iCell,1)), nint(com(iCell,2)))
+        q = (s - msCOM) * q / msCOM
+    endif
+    ! update polarization vector
+    p = q
+end subroutine getECPolar
+
+
 ! calculate center of mass of a single cell
 subroutine calcCellCOM( xcell, com)
     ! x = array of all the cell lattice sites

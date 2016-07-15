@@ -256,4 +256,62 @@ subroutine occupyCount( nl, xcell )
 end subroutine occupyCount
 
 
+! calculate cell k's contanct lengths with all its neighbors
+subroutine getContactL( k, N, nnLk, rSim, sigma, xcell)
+    implicit none
+    integer, intent(in) :: N
+    integer, intent(out), dimension(:)   :: nnLk
+    integer, intent(in),  dimension(:,:) :: sigma
+    integer, intent(in),  dimension(:,:) :: xcell
+    integer, dimension(2) :: nn, rSim
+    integer :: i, inn, j, k, nl
+
+    nnLk = 0
+
+    call occupyCount( nl, xcell)
+
+    do i = 1, nl
+        do inn = 1, 4
+            call nnGet( inn, nn, rSim, xcell(i,1:2))
+            if( nn(1) == 0 )then
+                cycle
+            endif
+            if( sigma(nn(1),nn(2)) /= k .AND. sigma(nn(1),nn(2)) /= 0 )then
+                nnLk( sigma(nn(1),nn(2))) = nnLk( sigma(nn(1),nn(2))) + 1
+            endif
+        enddo
+    enddo
+
+end subroutine getContactL
+
+
+! calculate perimeter of a cell
+real(b8) function perimCalc(rSim, sigma, xcell)
+    implicit none
+    integer,  intent(in), dimension(:,:) :: sigma
+    integer,  intent(in), dimension(:,:) :: xcell
+    integer,  intent(in), dimension(2) :: rSim
+    integer, dimension(2) :: nn
+    integer :: i, inn, k, nl
+    real(b8) :: P
+
+    P = 0.0
+    k = sigma( xcell(1,1), xcell(1,2)) ! cell label
+    call occupyCount( nl, xcell )
+    do i = 1, nl
+        do inn = 1, 4
+            ! write(*,*) xcell(i,1:2)
+            call nnGet( inn, nn, rSim, xcell(i,1:2))
+            if( nn(1) == 0 )then
+                cycle
+            endif
+            if( sigma(nn(1),nn(2)) /= k )then
+                P = P + 1.0
+            endif
+        enddo
+    enddo
+    perimCalc = P
+end function perimCalc
+
+
 end module
