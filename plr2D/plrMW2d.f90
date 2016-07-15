@@ -11,8 +11,8 @@ real(b8), parameter :: d  = 1.00_b8  ! diffusion coefficient
 real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
-integer,  parameter :: nRunTotal = 2 ! total number of instances
-integer,  parameter :: ncell = 1    ! total number of cells
+integer :: nRunTotal ! total number of instances
+integer :: ncell     ! total number of cells
 
 integer :: i, j, k, n, nx, ny, nTfinal, nRun
 integer :: sysSize(2), r0(2)
@@ -21,7 +21,11 @@ real(b8), allocatable :: c(:,:), cDelta(:,:)
 real(b8), allocatable :: p(:,:)
 
 call init_random_seed()
-
+! read on a few parameters
+open(unit=10, file="param.dat", action="read")
+read(10,*) ncell
+read(10,*) nRunTotal
+write(*,*) 'ncell =', ncell, 'nRunTotal =', nRunTotal
 ! set system size
 ! additional lattice sites needed to create gradient
 nx = 10
@@ -125,9 +129,6 @@ enddo ! ends instances loop
 !         write(*,*) sum(cTime(:,i,j)) / real(nfinal)
 !     enddo
 ! enddo
-open(unit=10, file="param.dat", action="write")
-write(10,*) ncell
-write(10,*) nRunTotal
 close(10)
 
 contains

@@ -1,4 +1,4 @@
-program plrMW2D
+program plrMW3D
 ! diffusion on a 3d lattice
 ! a constant gradient is imposed by special boundary conditions
 ! cells are polarized using MW
@@ -11,8 +11,8 @@ real(b8), parameter :: d  = 1.00_b8  ! diffusion coefficient
 real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
-integer,  parameter :: nRunTotal = 1 ! total number of instances
-integer,  parameter :: ncell = 5    ! total number of cells
+integer :: nRunTotal ! total number of instances
+integer :: ncell     ! total number of cells
 
 integer :: i, j, k, n, n1, n2, nTfinal, nRun
 integer :: sysSize(3), r0(3)
@@ -21,7 +21,11 @@ real(b8), allocatable :: c(:,:,:), cDelta(:,:,:)
 real(b8), allocatable :: p(:,:)
 
 call init_random_seed()
-
+! read on a few parameters
+open(unit=10, file="param.dat", action="read")
+read(10,*) ncell
+read(10,*) nRunTotal
+write(*,*) 'ncell =', ncell, 'nRunTotal =', nRunTotal
 ! set system size
 n1 = 6
 n2 = 6
