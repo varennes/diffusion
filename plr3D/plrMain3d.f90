@@ -27,15 +27,15 @@ read(10,*) ncell
 read(10,*) nRunTotal
 write(*,*) 'ncell =', ncell, 'nRunTotal =', nRunTotal
 ! set system size
-n1 = 6
-n2 = 6
+n1 = 20
+n2 = 20
 ! additional lattice sites needed to create gradient
 ! system is symmetric perpendicular to gradient
 sysSize(1) = n1 + 2 ! this is the gradient direction
 sysSize(2) = n2
 sysSize(3) = n2
 ! set cell parameters
-r0 = [ 2, 2, 2] ! cell dimensions
+r0 = [ 3, 3, 3] ! cell dimensions
 
 ! number of time-steps to iterate over
 nTfinal = 10 * int( (real(r0(1))*(real(ncell)**(0.333)))**2 / (d*dt) )
@@ -143,7 +143,8 @@ do nRun = 1, nRunTotal
         ! update polarization of each cell
         if ( mod( n, 10) == 0 ) then
             do i = 1, ncell
-                call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
+                call getECPolar( i, ncell, c, g, p(i,:), sysSize, sigma, xCell)
+                ! call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
                 ! call getMWPolar( p(i,:), c, xCell(i,:,:))
             enddo
             ! output total polarization
@@ -154,9 +155,6 @@ do nRun = 1, nRunTotal
     write(*,*) 'instance', nRun, 'complete'
 enddo ! ends instances loop
 
-open(unit=10, file="param.dat", action="write")
-write(10,*) ncell
-write(10,*) nRunTotal
 close(10)
 
 contains
