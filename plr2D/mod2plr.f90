@@ -119,12 +119,12 @@ subroutine getECPolar( iCell, N, c, g, p, rSim, sigma, x)
             enddo
             nl = nl + 1
         enddo
-        nlSum = nlSum + nl
+        nlSum = nlSum + (nl-1)
     enddo
     clstCOM = clstCOM / real(nlSum)
     ! get mean signal at cluster COM
     msCOM  = c(1,1) + g * (clstCOM(1) - 1.0_b8)
-    write(*,*) 'clstCOM =',clstCOM,' msCOM =',msCOM
+    ! write(*,*) 'clstCOM =',clstCOM,' msCOM =',msCOM
 
     ! calulcate com of each cell
     do i = 1, N
@@ -133,13 +133,14 @@ subroutine getECPolar( iCell, N, c, g, p, rSim, sigma, x)
 
     ! calculate cell perimeter and enclusure
     call getContactL( iCell, N, nnL, rSim, sigma, x(iCell,:,:))
+    q  = 0.0_b8
     P1 = int(perimCalc(rSim, sigma, x(iCell,:,:)))
     P2 = sum(nnL)
     if( P1 /= P2 )then
         ! calculate repulsion vector
         do j = 1, N
             if( nnL(j) /= 0 )then
-                qtmp = com(i,:) - com(j,:)
+                qtmp = com(j,:) - com(i,:)
                 qtmp = qtmp / sqrt( dot_product( qtmp, qtmp))
                 q(:) = q(:) + real(nnL(j)) * qtmp
             endif
@@ -150,6 +151,8 @@ subroutine getECPolar( iCell, N, c, g, p, rSim, sigma, x)
         ! get signal value at cell COM
         s = c( nint(com(iCell,1)), nint(com(iCell,2)))
         q = (s - msCOM) * q / msCOM
+        ! write(*,*) 'com', com(iCell,:)
+        ! write(*,*) 's=',s,'msCOM',msCOM,'clstCOM',clstCOM,  'q =',q
     endif
     ! update polarization vector
     p = q

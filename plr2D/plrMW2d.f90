@@ -38,6 +38,7 @@ p  = 0.0_b8
 
 ! number of time-steps to iterate over
 nTfinal = 10 * int( (real(r0(1))*sqrt(real(ncell)))**2 / (d*dt) )
+nTfinal = 10
 write(*,*) 'nTfinal =', nTfinal
 write(*,*)
 
