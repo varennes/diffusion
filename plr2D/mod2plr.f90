@@ -159,25 +159,6 @@ subroutine getECPolar( iCell, N, c, g, p, rSim, sigma, x)
 end subroutine getECPolar
 
 
-! calculate center of mass of a single cell
-subroutine calcCellCOM( xcell, com)
-    ! x = array of all the cell lattice sites
-    ! com = center of mass of a single cell
-    implicit none
-    integer, intent(in),  dimension(:,:) :: xcell
-    real(b8),    intent(out), dimension(:) :: com
-    integer :: i, j, nl
-    com = 0.0_b8
-    call occupyCount( nl, xcell(:,:))
-    do i = 1, nl
-        do j = 1, 2
-            com(j) = com(j) + real(xcell(i,j))
-        enddo
-    enddo
-    com = com / real(nl)
-end subroutine calcCellCOM
-
-
 ! output total cluster polarization to fort.141
 subroutine wrtPlrTotal( nRun, N, p, tstep)
     implicit none

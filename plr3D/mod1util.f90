@@ -251,4 +251,81 @@ subroutine occupyCount( nl, xcell )
 end subroutine occupyCount
 
 
+! calculate cell k's contanct lengths with all its neighbors
+subroutine getContactL( k, N, nnLk, rSim, sigma, xcell)
+    implicit none
+    integer, intent(in) :: N
+    integer, intent(out), dimension(:)     :: nnLk
+    integer, intent(in),  dimension(:,:,:) :: sigma
+    integer, intent(in),  dimension(:,:)   :: xcell
+    integer, dimension(3) :: nn, rSim
+    integer :: i, inn, j, k, nl
+
+    nnLk = 0
+
+    call occupyCount( nl, xcell)
+
+    do i = 1, nl
+        do inn = 1, 6
+            call nnGet( inn, nn, rSim, xcell(i,1:3))
+            if( nn(1) == 0 )then
+                cycle
+            endif
+            if( sigma(nn(1),nn(2),nn(3)) /= k .AND. sigma(nn(1),nn(2),nn(3)) /= 0 )then
+                nnLk( sigma(nn(1),nn(2),nn(3))) = nnLk( sigma(nn(1),nn(2),nn(3))) + 1
+            endif
+        enddo
+    enddo
+
+end subroutine getContactL
+
+
+! calculate perimeter of a cell
+real(b8) function perimCalc(rSim, sigma, xcell)
+    implicit none
+    integer,  intent(in), dimension(:,:,:) :: sigma
+    integer,  intent(in), dimension(:,:)   :: xcell
+    integer,  intent(in), dimension(3)     :: rSim
+    integer, dimension(3) :: nn
+    integer :: i, inn, k, nl
+    real(b8) :: P
+
+    P = 0.0
+    k = sigma( xcell(1,1), xcell(1,2), xcell(1,3)) ! cell label
+    call occupyCount( nl, xcell )
+    do i = 1, nl
+        do inn = 1, 6
+            ! write(*,*) xcell(i,1:2)
+            call nnGet( inn, nn, rSim, xcell(i,1:3))
+            if( nn(1) == 0 )then
+                cycle
+            endif
+            if( sigma(nn(1),nn(2),nn(3)) /= k )then
+                P = P + 1.0
+            endif
+        enddo
+    enddo
+    perimCalc = P
+end function perimCalc
+
+
+! calculate center of mass of a single cell
+subroutine calcCellCOM( xcell, com)
+    ! x = array of all the cell lattice sites
+    ! com = center of mass of a single cell
+    implicit none
+    integer,  intent(in),  dimension(:,:) :: xcell
+    real(b8), intent(out), dimension(:)   :: com
+    integer :: i, j, nl
+    com = 0.0_b8
+    call occupyCount( nl, xcell(:,:))
+    do i = 1, nl
+        do j = 1, 3
+            com(j) = com(j) + real(xcell(i,j))
+        enddo
+    enddo
+    com = com / real(nl)
+end subroutine calcCellCOM
+
+
 end module
