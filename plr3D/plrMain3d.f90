@@ -7,14 +7,14 @@ use polar
 
 implicit none
 
-real(b8), parameter :: d  = 1.00_b8  ! diffusion coefficient
-real(b8), parameter :: g  = 1.00_b8  ! concentration gradient
+real(b8), parameter :: d  =  1.00_b8  ! diffusion coefficient
+real(b8), parameter :: g  = 10.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
 integer :: nRunTotal ! total number of instances
 integer :: ncell     ! total number of cells
 
-integer :: i, j, k, n, n1, n2, nTfinal, nRun
+integer :: i, j, k, n, n1, n2, nTmod, nTfinal, nRun
 integer :: sysSize(3), r0(3)
 integer,  allocatable :: sigma(:,:,:), xCell(:,:,:)
 real(b8), allocatable :: c(:,:,:), cDelta(:,:,:)
@@ -27,20 +27,28 @@ read(10,*) ncell
 read(10,*) nRunTotal
 write(*,*) 'ncell =', ncell, 'nRunTotal =', nRunTotal
 ! set system size
-n1 = 20
-n2 = 20
+n1 = 100
+n2 = 100
 ! additional lattice sites needed to create gradient
 ! system is symmetric perpendicular to gradient
 sysSize(1) = n1 + 2 ! this is the gradient direction
 sysSize(2) = n2
 sysSize(3) = n2
 ! set cell parameters
-r0 = [ 3, 3, 3] ! cell dimensions
+r0 = [ 5, 5, 5] ! cell dimensions
 
 ! number of time-steps to iterate over
 nTfinal = 10 * int( (real(r0(1))*(real(ncell)**(0.333)))**2 / (d*dt) )
-nTfinal = 10
+nTmod   = floor( real(nTfinal) / 1000.0)
+if ( nTmod == 0 ) then
+    nTmod = floor( real(nTfinal) / 100.0)
+    if ( nTmod == 0 ) then
+        nTmod = 10
+    endif
+endif
+
 write(*,*) 'nTfinal =', nTfinal
+write(*,*) 'nTmod =', nTmod
 write(*,*)
 
 
@@ -141,7 +149,7 @@ do nRun = 1, nRunTotal
         ! enddo
 
         ! update polarization of each cell
-        if ( mod( n, 10) == 0 ) then
+        if ( mod( n, nTmod) == 0 ) then
             do i = 1, ncell
                 call getECPolar( i, ncell, c, g, p(i,:), sysSize, sigma, xCell)
                 ! call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
