@@ -174,8 +174,10 @@ subroutine wrtPlrTotal( nRun, N, p, tstep)
         px = px + p(i,1)
         py = py + p(i,2)
     enddo
-    ! pT = sqrt( px**2 + py**2)
-    write(100+nRun,*) px, py, tstep
+    write(100+nRun,"(E16.8)", advance="no") px
+    write(100+nRun,"(E16.8)", advance="no") py
+    write(100+nRun,"(I10)", advance="no") tstep
+    write(100+nRun,*) ''
 
 end subroutine wrtPlrTotal
 
