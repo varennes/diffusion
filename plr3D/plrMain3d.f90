@@ -14,7 +14,7 @@ real(b8), parameter :: dt = 0.01_b8 ! time-step size
 integer :: nRunTotal ! total number of instances
 integer :: ncell     ! total number of cells
 
-integer :: i, j, k, n, n1, n2, nTmod, nTfinal, nRun
+integer :: i, j, k, l, n, n1, n2, nTmod, nTfinal, nRun
 integer :: sysSize(3), r0(3)
 integer,  allocatable :: sigma(:,:,:), xCell(:,:,:)
 real(b8), allocatable :: c(:,:,:), cDelta(:,:,:)
@@ -36,21 +36,6 @@ sysSize(2) = n2
 sysSize(3) = n2
 ! set cell parameters
 r0 = [ 5, 5, 5] ! cell dimensions
-
-! number of time-steps to iterate over
-nTfinal = 10 * int( (real(r0(1))*(real(ncell)**(0.333)))**2 / (d*dt) )
-nTmod   = floor( real(nTfinal) / 1000.0)
-if ( nTmod == 0 ) then
-    nTmod = floor( real(nTfinal) / 100.0)
-    if ( nTmod == 0 ) then
-        nTmod = 10
-    endif
-endif
-
-write(*,*) 'nTfinal =', nTfinal
-write(*,*) 'nTmod =', nTmod
-write(*,*)
-
 
 ! allocate arrays
 allocate( c( sysSize(1), sysSize(2), sysSize(3)))
@@ -85,6 +70,23 @@ do nRun = 1, nRunTotal
     xcell = 0
     call itlSigmaRandom( ncell, r0, sysSize, sigma)
     call makeX( ncell, sysSize, sigma, xCell)
+
+    ! calculate cluster length and nTfinal
+    call getClusterLength( l, sysSize, sigma)
+    nTfinal = 10 * int( real(l)**2 / (d*dt) )
+    nTmod   = floor( real(nTfinal) / 1000.0)
+    if ( nTmod == 0 ) then
+        nTmod = floor( real(nTfinal) / 100.0)
+        if ( nTmod == 0 ) then
+            nTmod = 10
+        endif
+    endif
+    ! nTfinal = 50
+    ! nTmod   = 5
+    write(*,*) 'nTfinal =', nTfinal, 'l =', l
+    write(*,*) 'nTmod =', nTmod
+    write(*,*)
+
     ! write(*,*) 'sigma'
     ! do i = 1, sysSize(1)
     !     write(*,*) ' x =', i,'plane'

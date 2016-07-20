@@ -6,6 +6,64 @@ module utility
 contains
 
 
+! find the system size
+subroutine getClusterLength( l, sysSize, sigma)
+    implicit none
+    integer, intent(out) :: l
+    integer, intent(in),  dimension(3)     :: sysSize
+    integer, intent(in),  dimension(:,:,:) :: sigma
+    integer, dimension(3) :: lmin, lmax
+    integer :: i
+
+    lmin(:) = 0
+    lmax(:) = 0
+    ! find minimum poistion of cluster
+    do i = 1, sysSize(1)
+        if ( sum( sigma(i,:,:) ) > 0 ) then
+            lmin(1) = i
+            exit
+        end if
+    enddo
+    do i = 1, sysSize(2)
+        if ( sum( sigma(:,i,:) ) > 0 ) then
+            lmin(2) = i
+            exit
+        end if
+    enddo
+    do i = 1, sysSize(3)
+        if ( sum( sigma(:,:,i) ) > 0 ) then
+            lmin(3) = i
+            exit
+        end if
+    enddo
+    ! find maximum poistion of cluster
+    do i = sysSize(1), 1, -1
+        if ( sum( sigma(i,:,:) ) > 0 ) then
+            lmax(1) = i
+            exit
+        end if
+    enddo
+    do i = sysSize(2), 1, -1
+        if ( sum( sigma(:,i,:) ) > 0 ) then
+            lmax(2) = i
+            exit
+        end if
+    enddo
+    do i = sysSize(3), 1, -1
+        if ( sum( sigma(:,:,i) ) > 0 ) then
+            lmax(3) = i
+            exit
+        end if
+    enddo
+    l = 0
+    do i = 1, 3
+        if ( (lmax(i)-lmin(i)+1) > l ) then
+            l = lmax(i) - lmin(i) + 1
+        end if
+    enddo
+end subroutine getClusterLength
+
+
 ! create an array of all the cells lattice sites
 subroutine makeX( N, rSim, sigma, x)
     ! L = number of lattice sites along one dimension
