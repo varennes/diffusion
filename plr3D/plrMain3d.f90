@@ -7,8 +7,8 @@ use polar
 
 implicit none
 
-real(b8), parameter :: d  =  1.00_b8  ! diffusion coefficient
-real(b8), parameter :: g  = 10.00_b8  ! concentration gradient
+real(b8), parameter :: d  = 10.00_b8  ! diffusion coefficient
+real(b8), parameter :: g  =  1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
 integer :: nRunTotal ! total number of instances
@@ -50,7 +50,7 @@ do nRun = 1, nRunTotal
     ! initialize polarization
     p = 0.0_b8
     ! initialize concentration
-    c(:,:,:)      = 10.0_b8 - g
+    c(:,:,:)      =  0.0_b8
     cDelta(:,:,:) =  0.0_b8
     ! initalize gradient
     do i = 2, sysSize(1)
@@ -81,8 +81,8 @@ do nRun = 1, nRunTotal
             nTmod = 10
         endif
     endif
-    ! nTfinal = 50
-    ! nTmod   = 5
+    nTfinal = 50
+    nTmod   = 5
     write(*,*) 'nTfinal =', nTfinal, 'l =', l
     write(*,*) 'nTmod =', nTmod
     write(*,*)
@@ -111,7 +111,7 @@ do nRun = 1, nRunTotal
         do i = 2, sysSize(1)-1
             do j = 1, sysSize(2)
             do k = 1, sysSize(3)
-                cDelta(i,j,k) = getcDelta( i, j, k, c, sysSize)
+                cDelta(i,j,k) = dt * getcDelta( i, j, k, c, sysSize)
             enddo
             enddo
         enddo
@@ -119,7 +119,9 @@ do nRun = 1, nRunTotal
         do i = 2, sysSize(1)-1
             do j = 1, sysSize(2)
             do k = 1, sysSize(3)
-                c(i,j,k) = dt * cDelta(i,j,k) + c(i,j,k)
+                if ( (cDelta(i,j,k) + c(i,j,k)) > 0.0 ) then
+                    c(i,j,k) = cDelta(i,j,k) + c(i,j,k)
+                end if
                 ! write(*,*) i,j, 'c =', c(i,j)
                 ! if ( c(i,j) /= c(i,j) ) then
                 !     write(*,*) i,j, 'c =', c(i,j)
@@ -153,7 +155,8 @@ do nRun = 1, nRunTotal
         ! update polarization of each cell
         if ( mod( n, nTmod) == 0 ) then
             do i = 1, ncell
-                call getECPolar( i, ncell, c, g, p(i,:), sysSize, sigma, xCell)
+                call getECPolar2( i, ncell, c, g, p(i,:), sysSize, sigma, xCell)
+                ! call getECPolar( i, ncell, c, g, p(i,:), sysSize, sigma, xCell)
                 ! call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
                 ! call getMWPolar( p(i,:), c, xCell(i,:,:))
             enddo

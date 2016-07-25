@@ -7,14 +7,14 @@ use polar
 
 implicit none
 
-real(b8), parameter :: d  =  1.00_b8  ! diffusion coefficient
-real(b8), parameter :: g  = 10.00_b8  ! concentration gradient
+real(b8), parameter :: d  = 10.00_b8  ! diffusion coefficient
+real(b8), parameter :: g  =  1.00_b8  ! concentration gradient
 real(b8), parameter :: dt = 0.01_b8 ! time-step size
 
 integer :: nRunTotal ! total number of instances
 integer :: ncell     ! total number of cells
 
-integer :: i, j, k, n, nx, ny, nTmod, nTfinal, nRun
+integer :: i, j, k, l, n, nx, ny, nTmod, nTfinal, nRun
 integer :: sysSize(2), r0(2)
 integer,  allocatable :: sigma(:,:), xCell(:,:,:)
 real(b8), allocatable :: c(:,:), cDelta(:,:)
@@ -34,22 +34,6 @@ sysSize(1) = nx + 2 ! this is the gradient direction
 sysSize(2) = ny
 ! set cell parameters
 r0 = [ 10, 10] ! cell dimensions
-p  = 0.0_b8
-
-! number of time-steps to iterate over
-nTfinal = 10 * int( (real(r0(1))*sqrt(real(ncell)))**2 / (d*dt) )
-nTmod   = floor( real(nTfinal) / 1000.0)
-if ( nTmod == 0 ) then
-    nTmod = floor( real(nTfinal) / 100.0)
-    if ( nTmod == 0 ) then
-        nTmod = 10
-    endif
-endif
-
-write(*,*) 'nTfinal =', nTfinal
-write(*,*) 'nTmod =', nTmod
-write(*,*)
-
 
 ! allocate arrays
 allocate( c( sysSize(1), sysSize(2)))
@@ -61,8 +45,10 @@ allocate( p( ncell, 2))
 ! iterate over number of instances
 do nRun = 1, nRunTotal
 
+    ! initialize polarization
+    p = 0.0_b8
     ! initialize concentration
-    c(:,:)       = 10.0_b8 - g
+    c(:,:)       =  0.0_b8
     cDelta(:,:)  =  0.0_b8
     ! initalize gradient
     do i = 2, sysSize(1)
@@ -80,32 +66,38 @@ do nRun = 1, nRunTotal
     xcell = 0
     call itlSigmaRandom( ncell, r0, sysSize, sigma)
     call makeX( ncell, sysSize, sigma, xCell)
-    ! write(*,*) 'sigma'
-    ! do i = 1, sysSize(1)
-    !     write(*,*) sigma(i,:)
-    ! enddo
-    ! write(*,*)
-    ! write(*,*) ' x'
-    ! do i = 1, ncell
-    !     write(*,*) 'cell',i
-    !     do j = 1, r0(1)*r0(2)
-    !         write(*,*) xcell(i,j,:)
-    !     enddo
-    !     write(*,*)
-    ! enddo
+
+    ! calculate cluster length and nTfinal
+    call getClusterLength( l, sysSize, sigma)
+    nTfinal = 10 * int( real(l)**2 / (d*dt) )
+    nTmod   = floor( real(nTfinal) / 1000.0)
+    if ( nTmod == 0 ) then
+        nTmod = floor( real(nTfinal) / 100.0)
+        if ( nTmod == 0 ) then
+            nTmod = 10
+        endif
+    endif
+    nTfinal = 50
+    nTmod   = 5
+    write(*,*) 'nTfinal =', nTfinal, 'l =', l
+    write(*,*) 'nTmod =', nTmod
+    write(*,*)
+
 
     ! time evolution of chemical concentration
     do n = 1, nTfinal
         ! calculate cDelta for each lattice site
         do i = 2, sysSize(1)-1
             do j = 1, sysSize(2)
-                cDelta(i,j) = getcDelta( i, j, c, sysSize)
+                cDelta(i,j) = dt * getcDelta( i, j, c, sysSize)
             enddo
         enddo
         ! update c for each lattice site
         do i = 2, sysSize(1)-1
             do j = 1, sysSize(2)
-                c(i,j) = dt * cDelta(i,j) + c(i,j)
+                if ( (cDelta(i,j) + c(i,j)) > 0.0 ) then
+                    c(i,j) = cDelta(i,j) + c(i,j)
+                end if
                 ! write(*,*) i,j, 'c =', c(i,j)
                 ! if ( c(i,j) /= c(i,j) ) then
                 !     write(*,*) i,j, 'c =', c(i,j)
@@ -123,9 +115,10 @@ do nRun = 1, nRunTotal
         ! update polarization of each cell
         if ( mod( n, nTmod) == 0 ) then
             do i = 1, ncell
+                call getECPolar2( i, ncell, c, g, p(i,:), sysSize, sigma, xCell)
                 ! call getECPolar( i, ncell, c, g, p(i,:), sysSize, sigma, xCell)
                 ! call getMWPolar2( c, p(i,:), sysSize, sigma, xCell(i,:,:))
-                call getMWPolar( p(i,:), c, xCell(i,:,:))
+                ! call getMWPolar( p(i,:), c, xCell(i,:,:))
             enddo
             ! output total polarization
             call wrtPlrTotal( nRun, ncell, p, n)
@@ -169,7 +162,6 @@ contains
         ! calculate variance and sample noise
         cv = d * (cd + (4.0_b8) * c( i, j))
         ec = normal( 0.0_b8, sqrt(cv))
-        ! write(100,*) ec, cv
         ! caluclate cDelta
         cd = d * (cd - (4.0_b8) * c( i, j))
 
